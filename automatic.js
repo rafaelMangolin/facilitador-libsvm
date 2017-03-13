@@ -6,9 +6,7 @@ const fs = require('fs'),
       exec = require('child_process').exec,
       pathName = process.argv[2] || 'libsvm_arqs';
 
-try{
-  fs.mkdirSync("./folds");
-}catch(e){}
+
 
 let 
     fold_result   = [],
@@ -20,7 +18,7 @@ function organizarCsv(arr,keys){
   arr.forEach((data)=>{
     let foldPredName = data.split('\n')[1],
       foldNum = foldPredName.replace(/[a-zA-Z._/]*/g,''),
-      resultado_fd  = fs.createWriteStream('./folds/resultado_fold_'+foldNum+'.csv',{flags: 'w+',defaultEncoding: 'utf8',fd: null,mode: 0o666,autoClose: true}),
+      resultado_fd  = fs.createWriteStream(foldDest+'/resultado_fold_'+foldNum+'.csv',{flags: 'w+',defaultEncoding: 'utf8',fd: null,mode: 0o666,autoClose: true}),
       readPredict = fs.readFileSync(foldPredName,'utf8').split('\n');
     readPredict.pop();
     readPredict.shift();
@@ -114,7 +112,7 @@ function generateRuns(keys){
 }
 
 function runLibsvmSingle(folds,keys){
-  exec('./libsvm-3.21/tools/easy_c_g.py ./folds/all.txt .', (error, stdout, stderr)=>{
+  exec('./libsvm-3.21/tools/easy_c_g.py '+foldDest+'/all.txt .', (error, stdout, stderr)=>{
     if(error){
       throw stderr;
     }    
@@ -126,8 +124,8 @@ function runLibsvmSingle(folds,keys){
 function runLibsvm(folds,args,keys){
   let fold_name = folds.pop(),
     pyton_exec = isSingle?'./libsvm-3.21/tools/easy_fixed.py':'./libsvm-3.21/tools/easy.py',
-    train_file = './folds/fold_'+fold_name+'_train.txt',
-    test_file = './folds/fold_'+fold_name+'_test.txt',
+    train_file = foldDest+'/fold_'+fold_name+'_train.txt',
+    test_file = foldDest+'/fold_'+fold_name+'_test.txt',
     bash_str   = isSingle?[pyton_exec,train_file,args[0],args[1],test_file,'.']:[pyton_exec,train_file,test_file,'.'];
   exec(bash_str.join(' '), (error, stdout, stderr)=>{
     if(error){
@@ -146,14 +144,14 @@ function generateByFile(keys){
   let folds = getFolds(keys);
   let foldsArq = folds.reduce((a,b)=>{
     a[b] = {};
-    a[b].test = fs.createWriteStream('folds/fold_'+b+'_test.txt',{flags: 'w+',defaultEncoding: 'utf8',fd: null,mode: 0o666,autoClose: true});
-    a[b].train = fs.createWriteStream('folds/fold_'+b+'_train.txt',{flags: 'w+',defaultEncoding: 'utf8',fd: null,mode: 0o666,autoClose: true});
+    a[b].test = fs.createWriteStream(foldDest+'/fold_'+b+'_test.txt',{flags: 'w+',defaultEncoding: 'utf8',fd: null,mode: 0o666,autoClose: true});
+    a[b].train = fs.createWriteStream(foldDest+'/fold_'+b+'_train.txt',{flags: 'w+',defaultEncoding: 'utf8',fd: null,mode: 0o666,autoClose: true});
     return a; 
   },{})
 
   if(isSingle){
     foldsArq.all = {};
-    foldsArq.all.fp=fs.createWriteStream('./folds/all.txt',{flags: 'w+',defaultEncoding: 'utf8',fd: null,mode: 0o666,autoClose: true});
+    foldsArq.all.fp=fs.createWriteStream(foldDest+'/all.txt',{flags: 'w+',defaultEncoding: 'utf8',fd: null,mode: 0o666,autoClose: true});
   }
 
   for(var key in keys){
@@ -205,10 +203,18 @@ function getFolds(keys){
 */
 let isSingle = process.argv.filter(data=>data==='-s').length > 0;
 let countFolds;
+let foldDest = './folds';
 process.argv.forEach((data, index)=>{
   if(data === '-f'){
     countFolds = process.argv[index+1];
   }
+  if(data === '-o'){
+    foldDest = process.argv[index+1];
+  }
 });
+
+try{
+  fs.mkdirSync(foldDest);
+}catch(e){}
 
 execRuns();

@@ -26,5 +26,6 @@ Assim a ferramenta irá montar as folds de acordo com o que está descrito no ar
  - -s: executa os testes de cada fold, mas na hora de executar o treino, faz um com todos os audios, gerando uma modelo de treino que pode ser usado por todas as rodadas de teste;
  - -f n: caso queira executar uma quantidade n de folds, sem precisar modificar o arquivo de configuração. É criado n folds com uma quantidade balanceada de audios, e a disposioção das classes nas folds também são balanceadas.
 
+
 ## Saída
-Toda saída do facilitador vai se encontrar na pasta folds, contendo os arquivos usados para executar as runs do libsvm de cada fold, e também o arquivo de resultado de cada fold que contém a porcentagem geral de acerto para aquela fold e a predição da classe para cada audio.
+Toda saída do facilitador vai se encontrar na pasta informada (a informada pelo -o ou então a 'folds'), contendo os arquivos usados para executar as runs do libsvm de cada fold, e também o arquivo de resultado de cada fold que contém a porcentagem geral de acerto para aquela fold e a predição da classe para cada audio.
