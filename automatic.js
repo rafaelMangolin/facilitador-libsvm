@@ -12,7 +12,9 @@ try{
 
 let 
     fold_result   = [],
-    tags   = {};
+    tags   = {},
+    matrizesPred = {}
+    ;
 
 function organizarCsv(arr,keys){
   arr.forEach((data)=>{
@@ -20,40 +22,23 @@ function organizarCsv(arr,keys){
       foldNum = foldPredName.replace(/[a-zA-Z._/]*/g,''),
       resultado_fd  = fs.createWriteStream('./folds/resultado_fold_'+foldNum+'.csv',{flags: 'w+',defaultEncoding: 'utf8',fd: null,mode: 0o666,autoClose: true}),
       readPredict = fs.readFileSync(foldPredName,'utf8').split('\n');
-
     readPredict.pop();
+    readPredict.shift();
     let i = 0;
     resultado_fd.write(data.split('\n')[0]+';\n');
-    resultado_fd.write('Chave do vetor;Classe Predita;Classe correta;\n');
+    resultado_fd.write('Chave do vetor;'+tags.join(';')+';Classe Predita;Classe correta;\n');
     for(var key in keys){
       let data = keys[key];
       if(data.fold == foldNum){
-        resultado_fd.write(key+';'+tags[readPredict[i++]]+';'+data.class+';\n');
+        let toWrite = gerarResultado(key,readPredict[i++],data.class, foldNum);
+        resultado_fd.write(toWrite);
       }
     }
   })
 
-  // deleteFiles();
-}
-
-function gerarCsv(obj){
-  resultado_fd.write(';'+tags.join(';')+';Taxa de acerto total\n','utf8');
-  for(var key in obj){
-    let fold = obj[key],
-        toWrite = [key],
-        totalPerc = 0;
-    tags.forEach((data,index)=>{
-      let total = fold[index].certo+fold[index].errado,
-          perc  = (fold[index].certo/total)*100;
-          perc = perc;
-          totalPerc += perc;
-      toWrite.push(perc.toFixed(4)+'%');
-    })
-    toWrite.push((totalPerc/tags.length).toFixed(4)+'%');
-    resultado_fd.write(toWrite.join(';')+'\n','utf8');
-  }
   deleteFiles();
 }
+
 
 function deleteFiles(){
   exec('rm fold_*', (error, stdout, stderr)=>{
@@ -61,12 +46,25 @@ function deleteFiles(){
       throw stderr;
     }
   })
+  exec('rm all.txt*', (error, stdout, stderr)=>{
+    if(error){
+      throw stderr;
+    }
+  })
 }
 
-
 /**
-* Refatorado
+* Gerar saida com porcentagem de acerto.
 */
+
+function gerarResultado(key,line,correctClass, num){
+    line = line.split(' ');
+    let tagIndex = line.shift();
+    matrizesPred['fold'+num] = matrizesPred['fold'+num] || [];
+    matrizesPred['fold'+num].push(line.map(parseFloat));
+    return key+';'+line.join(';')+';'+tags[tagIndex]+';'+correctClass+';\n';
+}
+
 function execRuns(){
   let keys = readKeyFile(process.argv[2]);
   keys = readCharacteristicArrayFile(process.argv[3],keys);

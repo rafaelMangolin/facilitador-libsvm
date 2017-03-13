@@ -40,13 +40,13 @@ Popen(cmd, shell = True, stdout = PIPE).communicate()
 c = sys.argv[2]
 g = sys.argv[3]
 
-cmd = '{0} -c {1} -g {2} "{3}" "{4}"'.format(svmtrain_exe,c,g,scaled_file,model_file)
+cmd = '{0} -c {1} -g {2} -b 1 "{3}" "{4}"'.format(svmtrain_exe,c,g,scaled_file,model_file)
 Popen(cmd, shell = True, stdout = PIPE).communicate()
 
 if len(sys.argv) > 4:
 	cmd = '{0} -r "{1}" "{2}" > "{3}"'.format(svmscale_exe, range_file, test_pathname, scaled_test_file)
 	Popen(cmd, shell = True, stdout = PIPE).communicate()	
-	cmd = '{0} "{1}" "{2}" "{3}" teste.out'.format(svmpredict_exe, scaled_test_file, model_file, predict_test_file)
+	cmd = '{0} -b 1 "{1}" "{2}" "{3}" teste.out'.format(svmpredict_exe, scaled_test_file, model_file, predict_test_file)
 	Popen(cmd, shell = True).communicate()	
 
 	print('{0}'.format(predict_test_file))
