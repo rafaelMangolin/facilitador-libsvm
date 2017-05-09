@@ -11,7 +11,8 @@ const fs = require('fs'),
 let 
     fold_result   = [],
     tags   = {},
-    matrizesPred = {}
+    matrizesPred = {},
+    matrizConfusao = {}
     ;
 
 function organizarCsv(arr,keys){
@@ -25,6 +26,7 @@ function organizarCsv(arr,keys){
     let i = 0;
     resultado_fd.write(data.split('\n')[0]+';\n');
     resultado_fd.write('Chave do vetor;'+tags.join(';')+';Classe Predita;Classe correta;\n');
+    inicializaTabela();
     for(var key in keys){
       let data = keys[key];
       if(data.fold == foldNum){
@@ -32,21 +34,78 @@ function organizarCsv(arr,keys){
         resultado_fd.write(toWrite);
       }
     }
+    imprimeMedidas(resultado_fd);
   })
-
   deleteFiles();
+}
+
+function imprimeMedidas(fd){
+    let precision = [], recall = [];
+    fd.write('\nMatriz de confusão;\n');
+    fd.write(';'+tags.join(';')+';\n');
+    matrizConfusao.forEach((data,index)=>{
+      fd.write(tags[index]+';'+data.join(';')+';\n');
+    })
+
+    fd.write('\nPrecision;\n');
+    fd.write(tags.join(';')+';\n');
+    tags.forEach((data,index)=>{
+      let sumCol = matrizConfusao.reduce((a,b)=>{
+                  return a + b[index];
+                },0);
+      let prec = 0;
+      if(sumCol){
+        prec = matrizConfusao[index][index] / sumCol;
+      }
+      precision.push(prec);
+      fd.write(prec.toFixed(3) + ';');
+    })    
+    fd.write('\n');
+
+
+    fd.write('\nRecall;\n');
+    fd.write(tags.join(';')+';\n');
+    matrizConfusao.forEach((data,index)=>{
+      let rec = data[index] /
+                data.reduce((a,b)=>{
+                  return a + b;
+                },0);
+      recall.push(rec);
+      fd.write(rec.toFixed(3) + ';');
+    })    
+    fd.write('\n'); 
+
+
+    fd.write('\nF-measure;\n');
+    fd.write(tags.join(';')+';\n');
+    matrizConfusao.forEach((data,index)=>{
+      let fmeasure = 0;
+      if(precision[index]+recall[index]){
+        fmeasure = 2*((precision[index]*recall[index]) / (precision[index]+recall[index]))
+      }
+      fd.write(fmeasure.toFixed(3) + ';');
+    })    
+    fd.write('\n');    
+}
+
+function inicializaTabela(){
+  matrizConfusao = tags.map(() => {
+    return tags.map(() => {
+      return 0;
+    });
+  });
 }
 
 
 function deleteFiles(){
   exec('rm fold_*', (error, stdout, stderr)=>{
     if(error){
-      throw stderr;
+      console.log(stderr);
     }
   })
   exec('rm all.txt*', (error, stdout, stderr)=>{
     if(error){
-      throw stderr;
+      console.log(stderr);
     }
   })
 }
@@ -60,7 +119,12 @@ function gerarResultado(key,line,correctClass, num){
     let tagIndex = line.shift();
     matrizesPred['fold'+num] = matrizesPred['fold'+num] || [];
     matrizesPred['fold'+num].push(line.map(parseFloat));
+    preencherMatrizConfusao(tags[tagIndex],correctClass)
     return key+';'+line.join(';')+';'+tags[tagIndex]+';'+correctClass+';\n';
+}
+
+function preencherMatrizConfusao(predita,correta){
+  matrizConfusao[tags.indexOf(correta)][tags.indexOf(predita)]++;
 }
 
 function execRuns(){
@@ -77,8 +141,11 @@ function execRuns(){
 function readKeyFile(fileName){
   let keys = fs.readFileSync(fileName,'utf8').split('\n');
   let toReturn = {};
+  if(keys[keys.length-1] == ''){
+    keys.pop();
+  }
   keys.forEach((data)=>{
-    data = data.split(';');
+    data = data.replace('\r','').split(';');
     toReturn[data[0]] = {class:data[1]};
     tags[data[1]] = true;
     if(data[2] != null){
@@ -151,9 +218,8 @@ function generateByFile(keys){
 
   if(isSingle){
     foldsArq.all = {};
-    foldsArq.all.fp=fs.createWriteStream(foldDest+'/all.txt',{flags: 'w+',defaultEncoding: 'utf8',fd: null,mode: 0o666,autoClose: true});
+    foldsArq.all.fp = fs.createWriteStream(foldDest+'/all.txt',{flags: 'w+',defaultEncoding: 'utf8',fd: null,mode: 0o666,autoClose: true});
   }
-
   for(var key in keys){
     let data = keys[key];
     fillFiles(data,foldsArq);
